@@ -1,4 +1,5 @@
 import { pool } from '@/lib/db';
+import RefreshButton from '@/components/RefreshButton';
 
 // Disable caching for this page so it always shows the latest DB state
 export const dynamic = 'force-dynamic';
@@ -35,6 +36,7 @@ export default async function Home() {
           <div className="mt-4 inline-block px-4 py-1 rounded-full bg-gray-800 border border-gray-700 text-sm">
             Hora actual: <span className="font-mono text-emerald-400">{currentStr}</span>
           </div>
+          <RefreshButton />
         </header>
 
         {error && (
