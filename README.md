@@ -1,6 +1,8 @@
 # 🚌 Horarios Pullman Lago Peñuelas
 
-Dashboard personal para ver los horarios de la ruta costera San Antonio ↔ Valparaíso (via El Quisco, El Tabo, Cartagena, Algarrobo).
+Dashboard personal para buscar los horarios de bus de la ruta costera **Cartagena → El Tabo → El Quisco → Valparaíso**.
+
+Seleccionas a qué hora necesitas llegar a Valparaíso cada día (Lunes a Viernes), y el sistema te recomienda el mejor bus.
 
 Los horarios se obtienen automáticamente de las imágenes publicadas en el Facebook de la línea usando IA (Gemini Vision), ya que no están disponibles en ninguna API pública.
 
@@ -10,10 +12,21 @@ Los horarios se obtienen automáticamente de las imágenes publicadas en el Face
 
 - **Framework:** Next.js 16 (TypeScript)
 - **Hosting:** Vercel (Free Tier)
-- **Base de datos:** Vercel Postgres o Supabase
-- **Scraping:** Apify (Facebook scraper)
-- **IA:** Google Gemini 1.5 Flash (extracción de horarios desde imágenes)
+- **Base de datos:** Vercel Postgres
+- **Scraping:** Apify (Facebook Posts Scraper)
+- **IA:** Google Gemini 2.0 Flash (extracción de horarios desde imágenes)
 - **Estilos:** Tailwind CSS (Dark Mode)
+
+---
+
+## 🔄 Flujo de Funcionamiento
+
+1. **Cron Job (domingo 22:00 UTC)** o botón manual → Apify scrapea Facebook
+2. Se busca la publicación de la **semana actual** (por fecha en el texto del post)
+3. Cada imagen del post se procesa con **Gemini Vision** → extrae solo buses de ruta costera
+4. Los horarios se guardan en la tabla `weekly_schedules` en PostgreSQL
+5. El usuario selecciona su **hora de llegada deseada** por día → consulta rápida a la DB
+6. El sistema recomienda el bus más conveniente
 
 ---
 
@@ -40,7 +53,7 @@ Después del primer deploy, abre en el navegador:
 ```
 https://tu-dashboard.vercel.app/api/setup
 ```
-Esto creará la tabla `schedules` en la base de datos.
+Esto creará la tabla `weekly_schedules` en la base de datos.
 
 ### 4. Configurar Apify
 1. Crea una cuenta gratuita en [Apify](https://apify.com)
@@ -50,13 +63,27 @@ Esto creará la tabla `schedules` en la base de datos.
 
    > **Nota:** Si el nombre del actor no funciona, actualiza `src/lib/apify.ts` con el ID exacto del actor que encuentres en Apify Store.
 
-### 5. Verificar el cron job manualmente
-Puedes disparar el pipeline manualmente haciendo:
+### 5. Cargar horarios por primera vez
+Desde el dashboard, presiona el botón **"Actualizar desde Facebook"** para ejecutar el pipeline manualmente.
+
+También puedes dispararlo via API:
 ```bash
 curl -H "Authorization: Bearer TU_CRON_SECRET" https://tu-dashboard.vercel.app/api/cron
 ```
 
-El cron se ejecuta automáticamente todos los días a las **8:00 AM UTC** (5:00 AM hora Chile).
+El cron se ejecuta automáticamente cada **domingo a las 22:00 UTC** (19:00 hora Chile).
+
+---
+
+## 📡 API Endpoints
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/api/search` | Todos los horarios de la semana |
+| `GET` | `/api/search?day=Lunes&arrival_hour=09:00` | Horarios del día + bus recomendado |
+| `POST` | `/api/refresh` | Ejecutar pipeline manualmente |
+| `GET` | `/api/cron` | Llamado por Vercel Cron (requiere auth) |
+| `GET` | `/api/setup` | Crear/reinicializar tablas en la DB |
 
 ---
 
@@ -76,7 +103,7 @@ npm run dev
 
 Abre [http://localhost:3000](http://localhost:3000).
 
-> Para pruebas locales sin DB, la página mostrará un mensaje de "No hay horarios guardados". Configura una DB local de Postgres o usa una de Supabase para pruebas completas.
+> Para pruebas locales sin DB, la página mostrará un mensaje pidiendo actualizar desde Facebook. Configura una DB local de Postgres o usa Vercel Postgres para pruebas completas.
 
 ---
 
@@ -85,14 +112,19 @@ Abre [http://localhost:3000](http://localhost:3000).
 ```
 src/
 ├── app/
-│   ├── page.tsx           # Dashboard principal
-│   ├── layout.tsx         # Layout HTML
-│   ├── globals.css        # Estilos globales
+│   ├── page.tsx              # Dashboard principal
+│   ├── layout.tsx            # Layout HTML
+│   ├── globals.css           # Estilos globales
 │   └── api/
-│       ├── cron/route.ts  # Pipeline: Apify → Gemini → DB
-│       └── setup/route.ts # Inicialización de tabla en DB
+│       ├── search/route.ts   # Búsqueda de horarios por día/hora
+│       ├── refresh/route.ts  # Trigger manual del pipeline
+│       ├── cron/route.ts     # Pipeline automático (Vercel Cron)
+│       └── setup/route.ts    # Inicialización de tabla en DB
+├── components/
+│   └── ScheduleSearch.tsx    # Componente interactivo de búsqueda
 └── lib/
-    ├── db.ts              # Conexión a Postgres
-    ├── ai.ts              # Extracción con Gemini Vision
-    └── apify.ts           # Scraping de Facebook con Apify
+    ├── db.ts                 # Conexión a Postgres + esquema
+    ├── ai.ts                 # Extracción con Gemini Vision
+    ├── apify.ts              # Scraping de Facebook con Apify
+    └── pipeline.ts           # Orquestador: scrape → IA → DB
 ```
