@@ -32,7 +32,7 @@ En tu proyecto de Vercel, ve a **Settings** → **Environment Variables** y agre
 |---|---|
 | `POSTGRES_URL` | Vercel Postgres dashboard |
 | `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/app/apikey) (gratuito) |
-| `APIFY_API_TOKEN` | [Apify Console](https://console.apify.com/) → Settings → API tokens |
+| `APIFY_API_TOKEN` (o `APIFY_API_KEY`) | [Apify Console](https://console.apify.com/) → Settings → API tokens |
 | `CRON_SECRET` | Cualquier string aleatorio largo (ej. usa `openssl rand -base64 32`) |
 
 ### 3. Inicializar la base de datos

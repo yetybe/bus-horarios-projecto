@@ -1,7 +1,7 @@
 import { ApifyClient } from 'apify-client';
 
 const client = new ApifyClient({
-  token: process.env.APIFY_API_TOKEN,
+  token: process.env.APIFY_API_TOKEN || process.env.APIFY_API_KEY,
 });
 
 export async function fetchLatestFacebookImages(pageUrl: string, maxPosts: number = 3) {
