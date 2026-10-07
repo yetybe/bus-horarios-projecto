@@ -1,7 +1,5 @@
-import { Pool } from 'pg';
+﻿import { Pool } from 'pg';
 
-// Create a new pool using the environment variables
-// It will automatically use POSTGRES_URL if defined (or PGHOST, PGUSER, etc.)
 export const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
@@ -10,17 +8,19 @@ export const pool = new Pool({
 export async function initDb() {
   const client = await pool.connect();
   try {
-    // Create the schedules table if it doesn't exist
+    await client.query(`DROP TABLE IF EXISTS schedules;`);
     await client.query(`
-      CREATE TABLE IF NOT EXISTS schedules (
+      CREATE TABLE IF NOT EXISTS weekly_schedules (
         id SERIAL PRIMARY KEY,
-        route VARCHAR(100) NOT NULL, -- e.g., 'San Antonio - Valparaiso (Costa)'
+        day_of_week VARCHAR(20) NOT NULL,
+        day_date DATE,
         departure_time TIME NOT NULL,
         arrival_time TIME,
-        day_of_week VARCHAR(20) NOT NULL, -- e.g., 'Monday', 'Weekend', etc.
-        valid_from DATE DEFAULT CURRENT_DATE,
+        route VARCHAR(200) NOT NULL,
+        week_label VARCHAR(100),
+        source_image_url TEXT,
         last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        source_image_url TEXT
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
     console.log("Database initialized");
